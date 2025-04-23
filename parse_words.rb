@@ -21,8 +21,7 @@ module WordsParser
           current_word = current_word[0, prefix_length]
           current_word << parse_word(file)
 
-          word_number_bytes = file.read(2)
-          break unless word_number_bytes
+          break unless (word_number_bytes = file.read(2))
 
           word_number = word_number_bytes.unpack1(BIG_ENDIAN_UNSIGNED_SIXTEEN_BIT)
           dictionary[word_number] ||= []
