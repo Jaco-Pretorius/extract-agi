@@ -10,7 +10,6 @@ module WordsParser
   class << self
     def parse_words(file_path)
       dictionary = {}
-      previous_word = ''
       current_word = ''
       File.open(file_path, 'rb') do |file|
         file.seek(1, IO::SEEK_SET)
@@ -18,9 +17,8 @@ module WordsParser
         loop do
           break unless (byte = file.read(1))
 
-          previous_word = current_word
           prefix_length = byte.unpack1(UNSIGNED_EIGHT_BIT)
-          current_word = previous_word[0, prefix_length]
+          current_word = current_word[0, prefix_length]
           current_word << parse_word(file)
 
           word_number_bytes = file.read(2)
