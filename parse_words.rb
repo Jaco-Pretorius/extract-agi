@@ -15,15 +15,13 @@ module WordsParser
       File.open(file_path, 'rb') do |file|
         file.seek(INDEX_SIZE - 1, IO::SEEK_SET)
         loop do
-          break unless (byte = file.read(1))
-
-          prefix_length = byte.unpack1(UNSIGNED_EIGHT_BIT)
+          prefix_length = file.read(1).unpack1(UNSIGNED_EIGHT_BIT)
           current_word = current_word[0, prefix_length]
           current_word << parse_word(file)
 
-          break unless (word_number_bytes = file.read(2))
+          break if current_word.empty?
 
-          word_number = word_number_bytes.unpack1(BIG_ENDIAN_UNSIGNED_SIXTEEN_BIT)
+          word_number = file.read(2).unpack1(BIG_ENDIAN_UNSIGNED_SIXTEEN_BIT)
           dictionary[word_number] ||= []
           dictionary[word_number] << current_word
         end
@@ -34,8 +32,8 @@ module WordsParser
 
     def parse_index(file_path)
       File.open(file_path, 'rb') do |file|
-        ('a'..'z').each_with_object({}) do |letter, result|
-          result[letter] = file.read(2).unpack1(BIG_ENDIAN_UNSIGNED_SIXTEEN_BIT)
+        ('a'..'z').each_with_object({}) do |letter, index|
+          index[letter] = file.read(2).unpack1(BIG_ENDIAN_UNSIGNED_SIXTEEN_BIT)
         end
       end
     end
