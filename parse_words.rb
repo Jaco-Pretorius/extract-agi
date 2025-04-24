@@ -4,6 +4,7 @@ require 'optparse'
 require 'json'
 
 module WordsParser
+  INDEX_SIZE = 26 * 2
   BIG_ENDIAN_UNSIGNED_SIXTEEN_BIT = 'n'
   UNSIGNED_EIGHT_BIT = 'C'
 
@@ -12,8 +13,7 @@ module WordsParser
       dictionary = {}
       current_word = ''
       File.open(file_path, 'rb') do |file|
-        file.seek(1, IO::SEEK_SET)
-        file.seek(file.readbyte, IO::SEEK_SET)
+        file.seek(INDEX_SIZE - 1, IO::SEEK_SET)
         loop do
           break unless (byte = file.read(1))
 
@@ -30,6 +30,14 @@ module WordsParser
       end
 
       dictionary
+    end
+
+    def parse_index(file_path)
+      File.open(file_path, 'rb') do |file|
+        ('a'..'z').each_with_object({}) do |letter, result|
+          result[letter] = file.read(2).unpack1(BIG_ENDIAN_UNSIGNED_SIXTEEN_BIT)
+        end
+      end
     end
 
     private
@@ -83,5 +91,7 @@ end
 
 raise "File does not exist: #{options[:file_path]}" unless File.exist?(options[:file_path])
 
+index = WordsParser.parse_index(options[:file_path])
+puts JSON.pretty_generate(index)
 dictionary = WordsParser.parse_words(options[:file_path])
 puts JSON.pretty_generate(dictionary.sort.to_h)
