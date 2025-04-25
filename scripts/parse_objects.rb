@@ -15,7 +15,6 @@ module ObjectsParser
         offset_to_names = file.read_u16le
         max_animated_objects = file.read_u8
 
-        # objects = {}
         (3..offset_to_names).step(3).each do |offset|
           file.seek(offset, IO::SEEK_SET)
 
@@ -31,7 +30,7 @@ module ObjectsParser
 
             word << byte.chr
           end
-          puts "name: #{word}, starting_room: #{starting_room}"
+          puts "object: #{offset / 3 - 1}, name: #{word}, starting_room: #{starting_room}"
         end
       end
     end
