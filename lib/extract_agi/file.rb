@@ -5,8 +5,24 @@ require 'stringio'
 module ExtractAgi
   class File
     class << self
-      def open(file_path)
-        yield new(StringIO.new(::File.binread(file_path)))
+      def open(file_path, symmetric_encryption_key: nil)
+        if symmetric_encryption_key.nil?
+          yield new(StringIO.new(::File.binread(file_path)))
+        else
+          cleartext = String.new
+          ::File.open(file_path, 'rb') do |file|
+            encryption_key_index = 0
+
+            until file.eof?
+              byte = file.read(1).unpack1(UNSIGNED_EIGHT_BIT)
+              mutated = byte ^ symmetric_encryption_key[encryption_key_index].ord
+              encryption_key_index = (encryption_key_index + 1) % symmetric_encryption_key.length
+              cleartext << [mutated].pack(UNSIGNED_EIGHT_BIT)
+            end
+          end
+
+          yield new(StringIO.new(cleartext))
+        end
       end
     end
 
