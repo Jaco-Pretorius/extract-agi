@@ -6,28 +6,32 @@ require 'stringio'
 require_relative '../lib/extract_agi'
 
 module ObjectsParser
-  LITTLE_ENDIAN_UNSIGNED_SIXTEEN_BIT = 'v'
-  UNSIGNED_EIGHT_BIT = 'C'
   SYMMETRIC_ENCRYPTION_KEY = 'Avis Durgan'
+  private_constant :SYMMETRIC_ENCRYPTION_KEY
 
   class << self
     def parse_objects(file_path)
       ExtractAgi::File.open(file_path, symmetric_encryption_key: SYMMETRIC_ENCRYPTION_KEY) do |file|
-        offset = file.read_u16le
-        puts "Offset to words: #{offset}"
+        offset_to_names = file.read_u16le
+        max_animated_objects = file.read_u8
 
-        file.seek(offset, IO::SEEK_SET)
+        # objects = {}
+        (3..offset_to_names).step(3).each do |offset|
+          file.seek(offset, IO::SEEK_SET)
 
-        word = String.new
-        loop do
-          break unless (byte = file.read_u8)
+          name_offset = file.read_u16le
+          starting_room = file.read_u8
 
-          if byte.zero?
-            puts word
-            word = String.new
-          else
+          file.seek(name_offset + 3, IO::SEEK_SET)
+          word = String.new
+          loop do
+            byte = file.read_u8
+
+            break if byte.zero?
+
             word << byte.chr
           end
+          puts "name: #{word}, starting_room: #{starting_room}"
         end
       end
     end
