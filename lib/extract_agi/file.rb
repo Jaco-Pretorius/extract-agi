@@ -51,5 +51,9 @@ module ExtractAgi
     def read_u16le
       @io.read(2)&.unpack1(LITTLE_ENDIAN_UNSIGNED_SIXTEEN_BIT)
     end
+
+    def size
+      @io.size
+    end
   end
 end

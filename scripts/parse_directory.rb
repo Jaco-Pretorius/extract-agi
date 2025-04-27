@@ -8,7 +8,7 @@ options = {}
 parser = OptionParser.new do |opts|
   opts.banner = "Usage: #{File.basename($PROGRAM_NAME)} [options]"
 
-  opts.on('-fFILE', '--file=FILE', 'OBJECT file relative path') do |file_path|
+  opts.on('-fFILE', '--file=FILE', 'DIRECTORY file relative path') do |file_path|
     options[:file_path] = file_path
   end
 
@@ -35,4 +35,10 @@ end
 
 raise "File does not exist: #{options[:file_path]}" unless File.exist?(options[:file_path])
 
-ObjectsParser.parse_objects(options[:file_path])
+ExtractAgi::DirectoryParser.new(file_path: options[:file_path]).parse_directory do |directory|
+  if directory.resource_exists?
+    puts "Entry #{directory.index} - Volume: #{directory.volume}, Offset: #{directory.offset}"
+  else
+    puts "Entry #{directory.index} - Resource does not exist"
+  end
+end
