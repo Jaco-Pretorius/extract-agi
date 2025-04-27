@@ -19,7 +19,7 @@ module ExtractAgi
           byte3 = file.read_u8
 
           if [byte1, byte2, byte3].any? { |byte| byte != 0xFF }
-            volume = (byte1 & 0xF0) >> 4
+            volume = byte1 >> 4
             offset = ((byte1 & 0x0F) << 16) + (byte2 << 8) + byte3
 
             yield Directory.new(index: index, volume: volume, offset: offset)
