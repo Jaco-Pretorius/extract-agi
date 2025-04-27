@@ -4,9 +4,6 @@ require_relative 'file'
 
 module ExtractAgi
   class WordParser
-    INDEX_SIZE = 26 * 2
-    private_constant :INDEX_SIZE
-
     def initialize(file_path:)
       @file_path = file_path
     end
@@ -15,7 +12,7 @@ module ExtractAgi
       dictionary = {}
       current_word = ''
       ExtractAgi::File.open(@file_path) do |file|
-        file.seek(INDEX_SIZE - 1, IO::SEEK_SET)
+        file.seek(file.read_u16be, IO::SEEK_SET)
         loop do
           prefix_length = file.read_u8
           current_word = current_word[0, prefix_length]
