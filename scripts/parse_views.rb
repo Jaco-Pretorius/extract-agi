@@ -47,21 +47,17 @@ ExtractAgi::DirectoryParser.new(file_path: options[:file_path]).parse_directory 
       signature = file.read_u16be
       raise "Unexpected signature in volume file: #{signature}" unless signature == 0x1234
 
-      volume_number = file.read_u8
-      resource_size = file.read_u16le
-      puts "volume_number: #{volume_number}, resource_size: #{resource_size}"
-
-      puts "Unknown view header byte1: #{file.read_u8}"
-      puts "Unknown view header byte2: #{file.read_u8}"
+      file.read_u8 # volume number
+      file.read_u16le # resource size
+      file.read_u8 # Unknown view header byte1
+      file.read_u8 # Unknown view header byte2
 
       number_of_loops = file.read_u8
-      puts "Number of loops (less than 256): #{number_of_loops}"
-      puts "Description position (if not zero): #{file.read_u16le}"
+      file.read_u16le # Description position (if not zero)
 
       loops = (0...number_of_loops).each_with_object({}) do |loop_index, result|
         result[loop_index] = file.read_u16le + directory.offset + 5 # 5 is view header size?
       end
-      puts "Loops: #{loops.inspect}"
 
       loops.each do |loop_index, loop_offset|
         file.seek(loop_offset, IO::SEEK_SET)
@@ -79,8 +75,6 @@ ExtractAgi::DirectoryParser.new(file_path: options[:file_path]).parse_directory 
           cel_settings = file.read_u8
           cel_mirror = cel_settings >> 4
           cel_transparency = cel_settings & 0x0F
-
-          puts "cel_width: #{cel_width}, cel_height: #{cel_height}, cel_mirror: #{cel_mirror}, cel_transparency: #{cel_transparency}"
 
           bitmap = Array.new(cel_height) { Array.new(cel_width * 2) }
           row = 0
@@ -111,8 +105,6 @@ ExtractAgi::DirectoryParser.new(file_path: options[:file_path]).parse_directory 
               bitmap[row][col] = color_index
             end
           end
-
-          puts bitmap.inspect
 
           png = ChunkyPNG::Image.new(bitmap[0].size, bitmap.size, ChunkyPNG::Color::TRANSPARENT)
           (0...bitmap.size).each do |x|
