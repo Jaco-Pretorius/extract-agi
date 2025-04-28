@@ -39,41 +39,6 @@ end
 raise "File does not exist: #{options[:file_path]}" unless File.exist?(options[:file_path])
 raise "Path does not exist: #{options[:agi_path]}" unless Dir.exist?(options[:agi_path])
 
-def create_bmp(filename, data)
-  width = data[0].size
-  height = data.size
-
-  row_padding = (4 - (width * 3) % 4) % 4
-  pixel_data_size = (width * 3 + row_padding) * height
-  file_size = 54 + pixel_data_size
-
-  bmp_header = [
-    'BM', # Signature
-    file_size,                 # File size
-    0,                         # Reserved
-    54,                        # Offset to pixel data
-    40,                        # DIB header size
-    width,                     # Width
-    height,                    # Height
-    1 | (24 << 16),            # Planes (1) and BitsPerPixel (24)
-    0,                         # Compression (0 = none)
-    pixel_data_size, # Image size
-    2835, 2835,                # X and Y pixels per meter (72 DPI)
-    0, 0                       # Color table (unused)
-  ].pack('A2Vv2V3v2V6')
-
-  File.open(filename, 'wb') do |f|
-    f.write(bmp_header)
-
-    (0...height).each do |row|
-      (0...width).each do |col|
-        f.write([data[row][col]].pack('C3')) # Random RGB pixel
-      end
-      f.write("\x00" * row_padding) # Padding to 4 bytes per row
-    end
-  end
-end
-
 ExtractAgi::DirectoryParser.new(file_path: options[:file_path]).parse_directory do |directory|
   if directory.resource_exists?
     ExtractAgi::File.open(::File.join(options[:agi_path], "VOL.#{directory.volume}")) do |file|
@@ -115,7 +80,9 @@ ExtractAgi::DirectoryParser.new(file_path: options[:file_path]).parse_directory 
           cel_mirror = cel_settings >> 4
           cel_transparency = cel_settings & 0x0F
 
-          bitmap = Array.new(cel_height) { Array.new(cel_width) }
+          puts "cel_width: #{cel_width}, cel_height: #{cel_height}, cel_mirror: #{cel_mirror}, cel_transparency: #{cel_transparency}"
+
+          bitmap = Array.new(cel_height) { Array.new(cel_width * 2) }
           row = 0
           col = 0
 
@@ -138,15 +105,22 @@ ExtractAgi::DirectoryParser.new(file_path: options[:file_path]).parse_directory 
               raise 'color index invalid'
             end
 
-            bitmap[row][col] = ExtractAgi::COLOR_TABLE[color_index]
+            bitmap[row][col] = color_index
             (number_of_pixels * 2).times do
               col += 1
-              bitmap[row][col] = ExtractAgi::COLOR_TABLE[color_index]
+              bitmap[row][col] = color_index
             end
           end
 
-          create_bmp("loop_#{loop_index}_cel_#{cel_index}.bmp", bitmap)
-          # NSString *imagePath = [NSString stringWithFormat:@"%@/export_views/%@_%d_%d.png", agiDir, key, i, k];
+          puts bitmap.inspect
+
+          png = ChunkyPNG::Image.new(bitmap[0].size, bitmap.size, ChunkyPNG::Color::TRANSPARENT)
+          (0...bitmap.size).each do |x|
+            (0...bitmap[0].size).each do |y|
+              png[y, x] = ExtractAgi::COLOR_TABLE[bitmap[x][y]] if bitmap[x][y]
+            end
+          end
+          png.save("loop_#{loop_index}_cel_#{cel_index}.png")
         end
       end
     end

@@ -1,22 +1,25 @@
 # frozen_string_literal: true
 
+require 'chunky_png'
+
 module ExtractAgi
   COLOR_TABLE = {
-    0 => 0x000000,   # black
-    1 => 0x00002A,   # blue
-    2 => 0x002A00,   # green
-    3 => 0x002A2A,   # cyan
-    4 => 0x2A0000,   # red
-    5 => 0x2A002A,   # magenta
-    6 => 0x2A1500,   # brown
-    7 => 0x2A2A2A,   # light grey
-    8 => 0x151515,   # dark grey
-    9 => 0x15153F,   # light blue
-    10 => 0x153F15,  # light green
-    11 => 0x153F3F,  # light cyan
-    12 => 0x3F1515,  # light red
-    13 => 0x3F153F,  # light magenta
-    14 => 0x3F3F15,  # yellow
-    15 => 0x3F3F3F   # white
+    0 => ChunkyPNG::Color.rgba(0x00, 0x00, 0x00, 0xFF), # Black
+    1 => ChunkyPNG::Color.rgba(0x00, 0x00, 0x2A, 0xFF), # Blue
+    2 => ChunkyPNG::Color.rgba(0x00, 0x2A, 0x00, 0xFF), # Green
+    3 => ChunkyPNG::Color.rgba(0x00, 0x2A, 0x2A, 0xFF), # Cyan
+    4 => ChunkyPNG::Color.rgba(0x2A, 0x00, 0x00, 0xFF), # Red
+    5 => ChunkyPNG::Color.rgba(0x2A, 0x00, 0x2A, 0xFF), # Magenta
+    6 => ChunkyPNG::Color.rgba(0x2A, 0x15, 0x00, 0xFF), # Brown
+    7 => ChunkyPNG::Color.rgba(0x2A, 0x2A, 0x2A, 0xFF), # Light Grey
+    8 => ChunkyPNG::Color.rgba(0x15, 0x15, 0x15, 0xFF), # Dark Grey
+    9 => ChunkyPNG::Color.rgba(0x15, 0x15, 0x3F, 0xFF), # Light Blue
+    10 => ChunkyPNG::Color.rgba(0x15, 0x3F, 0x15, 0xFF), # Light Green
+    11 => ChunkyPNG::Color.rgba(0x15, 0x3F, 0x3F, 0xFF), # Light Cyan
+    12 => ChunkyPNG::Color.rgba(0x3F, 0x15, 0x15, 0xFF), # Light Red
+    13 => ChunkyPNG::Color.rgba(0x3F, 0x15, 0x3F, 0xFF), # Light Magenta
+    14 => ChunkyPNG::Color.rgba(0x3F, 0x3F, 0x15, 0xFF), # Yellow
+    15 => ChunkyPNG::Color.rgba(0x3F, 0x3F, 0x3F, 0xFF), # White
+    16 => ChunkyPNG::Color::TRANSPARENT
   }.freeze
 end
