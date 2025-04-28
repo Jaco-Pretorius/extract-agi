@@ -56,7 +56,7 @@ ExtractAgi::DirectoryParser.new(file_path: options[:file_path]).parse_directory 
       file.read_u16le # Description position (if not zero)
 
       loops = (0...number_of_loops).each_with_object({}) do |loop_index, result|
-        result[loop_index] = file.read_u16le + directory.offset + 5 # 5 is view header size?
+        result[loop_index] = file.read_u16le + directory.offset + 5 # 5 is view header size before the loops start
       end
 
       loops.each do |loop_index, loop_offset|
