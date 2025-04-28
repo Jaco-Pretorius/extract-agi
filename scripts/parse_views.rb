@@ -109,7 +109,7 @@ ExtractAgi::DirectoryParser.new(file_path: options[:file_path]).parse_directory 
               png[y, x] = ExtractAgi::COLOR_TABLE[bitmap[x][y]] if bitmap[x][y]
             end
           end
-          png.save("loop_#{loop_index}_cel_#{cel_index}.png")
+          png.save("view_#{directory.index}_loop_#{loop_index}_cel_#{cel_index}.png")
         end
       end
     end
