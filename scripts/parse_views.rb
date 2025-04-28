@@ -1,0 +1,154 @@
+# frozen_string_literal: true
+
+require 'optparse'
+require_relative '../lib/extract_agi'
+
+options = {}
+parser = OptionParser.new do |opts|
+  opts.banner = "Usage: #{File.basename($PROGRAM_NAME)} [options]"
+
+  opts.on('-fFILE', '--file=FILE', 'VIEW file relative path') do |file_path|
+    options[:file_path] = file_path
+  end
+
+  opts.on('-pPATH', '--path=PATH', 'Path of where the AGI VOL files are located') do |agi_path|
+    options[:agi_path] = agi_path
+  end
+
+  opts.on('-h', '--help', 'Prints this help') do
+    puts opts
+    exit
+  end
+end
+
+begin
+  parser.parse!
+  mandatory = %i[file_path agi_path]
+  missing = mandatory.select { |param| options[param].nil? }
+  unless missing.empty?
+    puts "Missing options: #{missing.join(', ')}"
+    puts parser
+    exit 1
+  end
+rescue OptionParser::InvalidOption, OptionParser::MissingArgument => e
+  puts e.message
+  puts parser
+  exit 1
+end
+
+raise "File does not exist: #{options[:file_path]}" unless File.exist?(options[:file_path])
+raise "Path does not exist: #{options[:agi_path]}" unless Dir.exist?(options[:agi_path])
+
+def create_bmp(filename, data)
+  width = data[0].size
+  height = data.size
+
+  row_padding = (4 - (width * 3) % 4) % 4
+  pixel_data_size = (width * 3 + row_padding) * height
+  file_size = 54 + pixel_data_size
+
+  bmp_header = [
+    'BM', # Signature
+    file_size,                 # File size
+    0,                         # Reserved
+    54,                        # Offset to pixel data
+    40,                        # DIB header size
+    width,                     # Width
+    height,                    # Height
+    1 | (24 << 16),            # Planes (1) and BitsPerPixel (24)
+    0,                         # Compression (0 = none)
+    pixel_data_size, # Image size
+    2835, 2835,                # X and Y pixels per meter (72 DPI)
+    0, 0                       # Color table (unused)
+  ].pack('A2Vv2V3v2V6')
+
+  File.open(filename, 'wb') do |f|
+    f.write(bmp_header)
+
+    (0...height).each do |row|
+      (0...width).each do |col|
+        f.write([data[row][col]].pack('C3')) # Random RGB pixel
+      end
+      f.write("\x00" * row_padding) # Padding to 4 bytes per row
+    end
+  end
+end
+
+ExtractAgi::DirectoryParser.new(file_path: options[:file_path]).parse_directory do |directory|
+  if directory.resource_exists?
+    ExtractAgi::File.open(::File.join(options[:agi_path], "VOL.#{directory.volume}")) do |file|
+      file.seek(directory.offset, IO::SEEK_SET)
+
+      signature = file.read_u16be
+      raise "Unexpected signature in volume file: #{signature}" unless signature == 0x1234
+
+      volume_number = file.read_u8
+      resource_size = file.read_u16le
+      puts "volume_number: #{volume_number}, resource_size: #{resource_size}"
+
+      puts "Unknown view header byte1: #{file.read_u8}"
+      puts "Unknown view header byte2: #{file.read_u8}"
+
+      number_of_loops = file.read_u8
+      puts "Number of loops (less than 256): #{number_of_loops}"
+      puts "Description position (if not zero): #{file.read_u16le}"
+
+      loops = (0...number_of_loops).each_with_object({}) do |loop_index, result|
+        result[loop_index] = file.read_u16le + directory.offset + 5 # 5 is view header size?
+      end
+      puts "Loops: #{loops.inspect}"
+
+      loops.each do |loop_index, loop_offset|
+        file.seek(loop_offset, IO::SEEK_SET)
+        number_of_cels = file.read_u8
+
+        loop_positions = (0...number_of_cels).each_with_object({}) do |cel_index, result|
+          result[cel_index] = file.read_u16le + loop_offset
+        end
+
+        (0...number_of_cels).each do |cel_index|
+          file.seek(loop_positions[cel_index], IO::SEEK_SET)
+
+          cel_width = file.read_u8
+          cel_height = file.read_u8
+          cel_settings = file.read_u8
+          cel_mirror = cel_settings >> 4
+          cel_transparency = cel_settings & 0x0F
+
+          bitmap = Array.new(cel_height) { Array.new(cel_width) }
+          row = 0
+          col = 0
+
+          end_of_cel = false
+          until end_of_cel
+            pixel = file.read_u8
+            if pixel.zero?
+              row += 1
+              col = 0
+              next if (end_of_cel = (row == cel_height))
+            end
+
+            color_index = pixel >> 4
+            number_of_pixels = pixel & 0x0F
+
+            if color_index < 0 || color_index > 15
+              # color_index = 0 if color_index.negative? # is this necessary?
+              # color_index = 15 if color_index > 15
+
+              raise 'color index invalid'
+            end
+
+            bitmap[row][col] = ExtractAgi::COLOR_TABLE[color_index]
+            (number_of_pixels * 2).times do
+              col += 1
+              bitmap[row][col] = ExtractAgi::COLOR_TABLE[color_index]
+            end
+          end
+
+          create_bmp("loop_#{loop_index}_cel_#{cel_index}.bmp", bitmap)
+          # NSString *imagePath = [NSString stringWithFormat:@"%@/export_views/%@_%d_%d.png", agiDir, key, i, k];
+        end
+      end
+    end
+  end
+end
