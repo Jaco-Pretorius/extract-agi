@@ -92,12 +92,9 @@ ExtractAgi::DirectoryParser.new(file_path: options[:file_path]).parse_directory 
             color_index = pixel >> 4
             number_of_pixels = pixel & 0x0F
 
-            if color_index < 0 || color_index > 15
-              # color_index = 0 if color_index.negative? # is this necessary?
-              # color_index = 15 if color_index > 15
+            raise 'color index invalid' if color_index.negative? || color_index > 15
 
-              raise 'color index invalid'
-            end
+            color_index = 16 if color_index == cel_transparency
 
             bitmap[row][col] = color_index
             (number_of_pixels * 2).times do
